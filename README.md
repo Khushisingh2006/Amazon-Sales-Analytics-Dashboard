@@ -1,4 +1,4 @@
-# 📊 Amazon Sales Analytics Dashboard
+Amazon Sales Analytics Dashboard
 
 An end-to-end sales analytics project that analyzes **100,000+ Amazon marketplace transactions**
 to surface revenue, profit, and customer purchasing trends through an **interactive dashboard
@@ -8,7 +8,7 @@ with 15+ KPIs**.
 
 ![Monthly Revenue Trend](images/monthly_revenue_trend.png)
 
-## Highlights
+ Highlights
 
 - Analyzed **100,000+ sales records** to identify revenue, profit, and customer purchasing trends
 - Built an **interactive dashboard with 15+ KPIs** (revenue, profit margin, AOV, return rate, top category/product/state/channel, customer segments, YoY growth, and more)
