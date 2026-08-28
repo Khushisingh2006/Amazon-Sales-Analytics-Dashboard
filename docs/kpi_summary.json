@@ -1,0 +1,24 @@
+{
+  "total_revenue": 1334445053.29,
+  "total_profit": 324489005.23,
+  "profit_margin_pct": 24.32,
+  "total_orders": 100000,
+  "avg_order_value": 13344.45,
+  "total_units_sold": 154308,
+  "unique_customers": 32928,
+  "avg_revenue_per_customer": 40526.15,
+  "return_rate_pct": 6.0,
+  "avg_customer_rating": 4.0,
+  "avg_discount_pct": 12.09,
+  "top_category": "Electronics",
+  "top_category_revenue": 985473340.18,
+  "top_product": "Headphones",
+  "top_state": "Haryana",
+  "top_sales_channel": "Mobile App",
+  "top_payment_mode": "UPI",
+  "yoy_growth_pct": {
+    "2022_to_2023": -0.55,
+    "2023_to_2024": -0.07
+  },
+  "prime_member_revenue_share_pct": 25.05
+}

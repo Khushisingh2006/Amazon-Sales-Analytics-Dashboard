@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Amazon Sales Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg: #0F1720;
+    --panel: #16212C;
+    --panel-2: #1C2A37;
+    --border: #26374533;
+    --amazon-orange: #FF9900;
+    --amazon-teal: #00A8A0;
+    --text: #E8EEF2;
+    --text-dim: #8FA3B0;
+    --up: #3DDC97;
+    --down: #FF6B6B;
+    --font-display: 'Georgia', 'Times New Roman', serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'SF Mono', 'Consolas', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height:100vh;
+    background-image:
+      radial-gradient(circle at 15% 0%, #1a2735 0%, transparent 45%),
+      radial-gradient(circle at 85% 100%, #16232e 0%, transparent 45%);
+  }
+  .wrap{ max-width:1320px; margin:0 auto; padding: 28px 24px 60px; }
+
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-bottom: 1px solid #26374560;
+    padding-bottom: 18px; margin-bottom: 26px;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:8px;
+    background: linear-gradient(135deg, var(--amazon-orange), #ffb84d);
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-display); font-weight:700; color:#1a1206; font-size:19px;
+  }
+  h1{ font-family: var(--font-display); font-size: 22px; font-weight:700; letter-spacing:0.2px;}
+  .subtitle{ color:var(--text-dim); font-size:12.5px; margin-top:2px; }
+  .meta{ text-align:right; color:var(--text-dim); font-size:12px; font-family:var(--font-mono); }
+  .meta strong{ color:var(--text); }
+
+  .filters{
+    display:flex; gap:10px; margin-bottom: 22px; flex-wrap:wrap;
+  }
+  .filters select{
+    background: var(--panel); color:var(--text); border:1px solid #2a3b48;
+    padding:8px 12px; border-radius:7px; font-size:12.5px; font-family: var(--font-body);
+  }
+
+  .kpi-grid{
+    display:grid; grid-template-columns: repeat(6, 1fr); gap:14px; margin-bottom: 26px;
+  }
+  .kpi-card{
+    background: var(--panel);
+    border: 1px solid #24333f;
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    position:relative;
+    overflow:hidden;
+  }
+  .kpi-card::before{
+    content:""; position:absolute; top:0; left:0; width:3px; height:100%;
+    background: var(--amazon-orange);
+  }
+  .kpi-label{ font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.6px; }
+  .kpi-value{ font-family: var(--font-display); font-size: 23px; font-weight:700; margin-top:6px; }
+  .kpi-sub{ font-size:11px; margin-top:5px; color:var(--text-dim); }
+  .kpi-sub.up{ color: var(--up); }
+  .kpi-sub.down{ color: var(--down); }
+
+  .grid-2{ display:grid; grid-template-columns: 2fr 1fr; gap:16px; margin-bottom:16px; }
+  .grid-3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+  .grid-4{ display:grid; grid-template-columns: 1.3fr 1fr; gap:16px; margin-bottom:16px; }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid #24333f;
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .panel h3{
+    font-family: var(--font-display); font-size: 14.5px; font-weight:700;
+    margin-bottom: 4px; color:var(--text);
+  }
+  .panel .desc{ font-size:11.5px; color:var(--text-dim); margin-bottom:14px; }
+  .chart-box{ position:relative; height: 260px; }
+  .chart-box.tall{ height: 320px; }
+
+  footer{
+    margin-top: 30px; padding-top:18px; border-top:1px solid #26374560;
+    color:var(--text-dim); font-size:11.5px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  footer a{ color: var(--amazon-orange); text-decoration:none; }
+
+  @media (max-width:1100px){
+    .kpi-grid{ grid-template-columns: repeat(3, 1fr); }
+    .grid-2, .grid-3, .grid-4{ grid-template-columns: 1fr; }
+  }
+  @media (max-width:600px){
+    .kpi-grid{ grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">a</div>
+      <div>
+        <h1>Amazon Sales Analytics Dashboard</h1>
+        <div class="subtitle">100,000+ transactions &middot; FY2022&ndash;FY2024 &middot; India Marketplace</div>
+      </div>
+    </div>
+    <div class="meta">
+      Data refreshed: <strong>Dec 31, 2024</strong><br/>
+      Source: amazon_sales_data.csv
+    </div>
+  </header>
+
+  <div class="filters">
+    <select id="yearFilter">
+      <option value="all">All Years</option>
+      <option value="2022">2022</option>
+      <option value="2023">2023</option>
+      <option value="2024">2024</option>
+    </select>
+    <select id="categoryHint" disabled title="Static build — regenerate data for live filtering">
+      <option>All Categories</option>
+    </select>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h3>Monthly Revenue Trend</h3>
+      <div class="desc">Net sales by month, Jan 2022 &ndash; Dec 2024</div>
+      <div class="chart-box tall"><canvas id="revenueTrend"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Sales Channel Split</h3>
+      <div class="desc">Revenue share by channel</div>
+      <div class="chart-box tall"><canvas id="channelPie"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="panel">
+      <h3>Revenue by Category</h3>
+      <div class="desc">Net sales, all categories</div>
+      <div class="chart-box"><canvas id="categoryBar"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Top 10 Products</h3>
+      <div class="desc">By net revenue</div>
+      <div class="chart-box"><canvas id="productBar"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Top 10 States</h3>
+      <div class="desc">By net revenue</div>
+      <div class="chart-box"><canvas id="stateBar"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-4">
+    <div class="panel">
+      <h3>Monthly Profit Trend</h3>
+      <div class="desc">Profit after cost &amp; discounts</div>
+      <div class="chart-box"><canvas id="profitTrend"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Customer Segment Revenue</h3>
+      <div class="desc">New vs Returning vs Prime</div>
+      <div class="chart-box"><canvas id="segmentDonut"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="panel">
+      <h3>Revenue by Day of Week</h3>
+      <div class="desc">Weekday purchasing pattern</div>
+      <div class="chart-box"><canvas id="weekdayBar"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Payment Mode Usage</h3>
+      <div class="desc">Order count by payment method</div>
+      <div class="chart-box"><canvas id="paymentDonut"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Summary</h3>
+      <div class="desc">Headline read-out</div>
+      <div id="summaryText" style="font-size:13px; line-height:1.9; color:var(--text-dim);"></div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Amazon Sales Analytics Dashboard &middot; Built with Python (pandas) + Chart.js &middot; Synthetic dataset for portfolio demonstration</span>
+    <span><a href="../data/amazon_sales_data.csv">Download dataset</a></span>
+  </footer>
+
+</div>
+
+<script>
+const DATA = {
+  "kpis": {
+    "total_revenue": 1334445053.29,
+    "total_profit": 324489005.23,
+    "profit_margin_pct": 24.32,
+    "total_orders": 100000,
+    "avg_order_value": 13344.45,
+    "total_units_sold": 154308,
+    "unique_customers": 32928,
+    "avg_revenue_per_customer": 40526.15,
+    "return_rate_pct": 6.0,
+    "avg_customer_rating": 4.0,
+    "avg_discount_pct": 12.09,
+    "top_category": "Electronics",
+    "top_category_revenue": 985473340.18,
+    "top_product": "Headphones",
+    "top_state": "Haryana",
+    "top_sales_channel": "Mobile App",
+    "top_payment_mode": "UPI",
+    "yoy_growth_pct": {
+      "2022_to_2023": -0.55,
+      "2023_to_2024": -0.07
+    },
+    "prime_member_revenue_share_pct": 25.05
+  },
+  "monthly_revenue": {
+    "labels": [
+      "2022-01",
+      "2022-02",
+      "2022-03",
+      "2022-04",
+      "2022-05",
+      "2022-06",
+      "2022-07",
+      "2022-08",
+      "2022-09",
+      "2022-10",
+      "2022-11",
+      "2022-12",
+      "2023-01",
+      "2023-02",
+      "2023-03",
+      "2023-04",
+      "2023-05",
+      "2023-06",
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01",
+      "2024-02",
+      "2024-03",
+      "2024-04",
+      "2024-05",
+      "2024-06",
+      "2024-07",
+      "2024-08",
+      "2024-09",
+      "2024-10",
+      "2024-11",
+      "2024-12"
+    ],
+    "values": [
+      39479127.42,
+      34146832.78,
+      36847732.72,
+      37761401.07,
+      41114840.26,
+      36419236.01,
+      36789474.67,
+      38743720.2,
+      37283565.08,
+      36478623.25,
+      34099549.38,
+      37394919.11,
+      35684342.37,
+      37383963.18,
+      35656987.85,
+      35042390.49,
+      37906492.12,
+      34693589.78,
+      38680562.35,
+      41209380.37,
+      36319405.39,
+      36874955.28,
+      35210042.64,
+      39432170.47,
+      37122466.18,
+      35220813.18,
+      35592299.32,
+      35146371.94,
+      38147859.46,
+      34662508.32,
+      39617593.4,
+      36733172.64,
+      37081990.67,
+      37907720.27,
+      35606878.95,
+      40952074.72
+    ]
+  },
+  "monthly_profit": {
+    "labels": [
+      "2022-01",
+      "2022-02",
+      "2022-03",
+      "2022-04",
+      "2022-05",
+      "2022-06",
+      "2022-07",
+      "2022-08",
+      "2022-09",
+      "2022-10",
+      "2022-11",
+      "2022-12",
+      "2023-01",
+      "2023-02",
+      "2023-03",
+      "2023-04",
+      "2023-05",
+      "2023-06",
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01",
+      "2024-02",
+      "2024-03",
+      "2024-04",
+      "2024-05",
+      "2024-06",
+      "2024-07",
+      "2024-08",
+      "2024-09",
+      "2024-10",
+      "2024-11",
+      "2024-12"
+    ],
+    "values": [
+      9467127.85,
+      8011332.18,
+      9046895.21,
+      9320142.14,
+      9836354.51,
+      9215104.13,
+      8993503.62,
+      9510616.08,
+      9240248.85,
+      8727035.64,
+      7938443.41,
+      8974803.17,
+      8734078.07,
+      9224376.49,
+      8782065.03,
+      8709443.42,
+      9434082.07,
+      8566687.97,
+      9276590.06,
+      10197293.98,
+      8974914.23,
+      8874393.35,
+      8598756.44,
+      9483371.77,
+      8837144.99,
+      8417600.19,
+      8925375.44,
+      8353239.0,
+      9447226.79,
+      8349053.37,
+      9572136.09,
+      9169905.36,
+      8548317.54,
+      8943060.75,
+      8804122.9,
+      9984163.14
+    ]
+  },
+  "category_revenue": {
+    "labels": [
+      "Electronics",
+      "Home & Kitchen",
+      "Sports & Fitness",
+      "Fashion",
+      "Toys & Baby Products",
+      "Beauty & Personal Care",
+      "Grocery",
+      "Books"
+    ],
+    "values": [
+      985473340.18,
+      124812810.19,
+      103402648.08,
+      57945557.24,
+      27641754.08,
+      21299834.17,
+      7598351.28,
+      6270758.07
+    ]
+  },
+  "state_revenue": {
+    "labels": [
+      "Haryana",
+      "West Bengal",
+      "Rajasthan",
+      "Tamil Nadu",
+      "Telangana",
+      "Delhi",
+      "Gujarat",
+      "Punjab",
+      "Karnataka",
+      "Kerala"
+    ],
+    "values": [
+      116891844.55,
+      114317079.5,
+      112892001.21,
+      111849817.18,
+      111835250.87,
+      111499075.63,
+      110983030.88,
+      110238926.53,
+      109424080.85,
+      108963739.87
+    ]
+  },
+  "channel_revenue": {
+    "labels": [
+      "Mobile App",
+      "Website",
+      "Amazon App - Prime"
+    ],
+    "values": [
+      536893064.37,
+      467109554.42,
+      330442434.5
+    ]
+  },
+  "payment_mode": {
+    "labels": [
+      "UPI",
+      "Credit Card",
+      "Debit Card",
+      "Cash on Delivery",
+      "Amazon Pay",
+      "Net Banking"
+    ],
+    "values": [
+      29972.0,
+      19844.0,
+      15167.0,
+      14866.0,
+      10213.0,
+      9938.0
+    ]
+  },
+  "segment_revenue": {
+    "labels": [
+      "New",
+      "Prime Member",
+      "Returning"
+    ],
+    "values": [
+      400559278.38,
+      334263716.62,
+      599622058.29
+    ]
+  },
+  "weekday_revenue": {
+    "labels": [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday"
+    ],
+    "values": [
+      190026334.56,
+      194015920.99,
+      188183272.5,
+      190717433.31,
+      183859111.88,
+      194536527.74,
+      193106452.31
+    ]
+  },
+  "top_products": {
+    "labels": [
+      "Headphones",
+      "Tablet",
+      "Bluetooth Speaker",
+      "Smartphone",
+      "Gaming Console",
+      "Camera",
+      "Smartwatch",
+      "Laptop",
+      "Power Bank",
+      "Router"
+    ],
+    "values": [
+      103589758.6,
+      101019764.45,
+      100955514.29,
+      97983677.05,
+      97970228.78,
+      97512034.23,
+      97190536.43,
+      96892628.83,
+      96870726.13,
+      95488471.39
+    ]
+  }
+};
+
+const orange = "#FF9900";
+const teal = "#00A8A0";
+const blue = "#4C9FE8";
+const palette = ["#FF9900","#00A8A0","#4C9FE8","#FFC65C","#7FBA6C","#E0708A","#8E7CC3","#5BC0DE"];
+
+Chart.defaults.color = "#8FA3B0";
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+Chart.defaults.borderColor = "#24333f";
+
+function fmtINR(n){
+  if (Math.abs(n) >= 1e7) return "₹" + (n/1e7).toFixed(2) + " Cr";
+  if (Math.abs(n) >= 1e5) return "₹" + (n/1e5).toFixed(2) + " L";
+  return "₹" + n.toLocaleString("en-IN");
+}
+
+// ---------- KPI Cards ----------
+const k = DATA.kpis;
+const kpiCards = [
+  { label: "Total Revenue", value: fmtINR(k.total_revenue), sub: `${k.total_orders.toLocaleString()} orders` },
+  { label: "Total Profit", value: fmtINR(k.total_profit), sub: `${k.profit_margin_pct}% margin` },
+  { label: "Avg Order Value", value: fmtINR(k.avg_order_value), sub: `${k.total_units_sold.toLocaleString()} units sold` },
+  { label: "Unique Customers", value: k.unique_customers.toLocaleString(), sub: `${fmtINR(k.avg_revenue_per_customer)} / customer` },
+  { label: "Return Rate", value: k.return_rate_pct + "%", sub: `${k.avg_customer_rating} ★ avg rating`, cls: "down" },
+  { label: "Avg Discount", value: k.avg_discount_pct + "%", sub: "across all orders" },
+  { label: "Top Category", value: k.top_category, sub: fmtINR(k.top_category_revenue) },
+  { label: "Top Product", value: k.top_product, sub: "by net revenue" },
+  { label: "Top State", value: k.top_state, sub: "by net revenue" },
+  { label: "Leading Channel", value: k.top_sales_channel, sub: "highest revenue share" },
+  { label: "Top Payment Mode", value: k.top_payment_mode, sub: "most used method" },
+  { label: "Prime Member Share", value: k.prime_member_revenue_share_pct + "%", sub: "of total revenue" },
+];
+const grid = document.getElementById("kpiGrid");
+kpiCards.forEach(c => {
+  const div = document.createElement("div");
+  div.className = "kpi-card";
+  div.innerHTML = `<div class="kpi-label">${c.label}</div><div class="kpi-value">${c.value}</div><div class="kpi-sub ${c.cls||''}">${c.sub}</div>`;
+  grid.appendChild(div);
+});
+
+document.getElementById("summaryText").innerHTML = `
+  Across <strong style="color:#fff">${k.total_orders.toLocaleString()}</strong> orders, the business generated
+  <strong style="color:#fff">${fmtINR(k.total_revenue)}</strong> in net revenue at a
+  <strong style="color:#fff">${k.profit_margin_pct}%</strong> profit margin.
+  <strong style="color:#fff">${k.top_category}</strong> leads all categories, and
+  <strong style="color:#fff">${k.top_sales_channel}</strong> is the top-performing sales channel.
+  Returns sit at <strong style="color:#fff">${k.return_rate_pct}%</strong> with an average rating of
+  <strong style="color:#fff">${k.avg_customer_rating} / 5</strong>.
+`;
+
+// ---------- Charts ----------
+new Chart(document.getElementById("revenueTrend"), {
+  type: "line",
+  data: { labels: DATA.monthly_revenue.labels, datasets: [{
+    data: DATA.monthly_revenue.values, borderColor: orange, backgroundColor: "#FF990022",
+    fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2
+  }]},
+  options: { plugins:{legend:{display:false}}, scales:{ x:{ticks:{maxTicksLimit:8}}, y:{ticks:{callback:v=>fmtINR(v)}} } }
+});
+
+new Chart(document.getElementById("channelPie"), {
+  type: "doughnut",
+  data: { labels: DATA.channel_revenue.labels, datasets: [{ data: DATA.channel_revenue.values, backgroundColor: palette, borderWidth:0 }]},
+  options: { plugins:{legend:{position:"bottom", labels:{boxWidth:10, font:{size:10.5}}}} }
+});
+
+new Chart(document.getElementById("categoryBar"), {
+  type: "bar",
+  data: { labels: DATA.category_revenue.labels, datasets: [{ data: DATA.category_revenue.values, backgroundColor: blue, borderRadius:4 }]},
+  options: { indexAxis:"y", plugins:{legend:{display:false}}, scales:{ x:{ticks:{callback:v=>fmtINR(v)}} } }
+});
+
+new Chart(document.getElementById("productBar"), {
+  type: "bar",
+  data: { labels: DATA.top_products.labels, datasets: [{ data: DATA.top_products.values, backgroundColor: teal, borderRadius:4 }]},
+  options: { indexAxis:"y", plugins:{legend:{display:false}}, scales:{ x:{ticks:{callback:v=>fmtINR(v)}} } }
+});
+
+new Chart(document.getElementById("stateBar"), {
+  type: "bar",
+  data: { labels: DATA.state_revenue.labels, datasets: [{ data: DATA.state_revenue.values, backgroundColor: orange, borderRadius:4 }]},
+  options: { indexAxis:"y", plugins:{legend:{display:false}}, scales:{ x:{ticks:{callback:v=>fmtINR(v)}} } }
+});
+
+new Chart(document.getElementById("profitTrend"), {
+  type: "line",
+  data: { labels: DATA.monthly_profit.labels, datasets: [{
+    data: DATA.monthly_profit.values, borderColor: teal, backgroundColor: "#00A8A022",
+    fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2
+  }]},
+  options: { plugins:{legend:{display:false}}, scales:{ x:{ticks:{maxTicksLimit:8}}, y:{ticks:{callback:v=>fmtINR(v)}} } }
+});
+
+new Chart(document.getElementById("segmentDonut"), {
+  type: "doughnut",
+  data: { labels: DATA.segment_revenue.labels, datasets: [{ data: DATA.segment_revenue.values, backgroundColor: [palette[1],palette[0],palette[2]], borderWidth:0 }]},
+  options: { plugins:{legend:{position:"bottom", labels:{boxWidth:10, font:{size:10.5}}}} }
+});
+
+new Chart(document.getElementById("weekdayBar"), {
+  type: "bar",
+  data: { labels: DATA.weekday_revenue.labels, datasets: [{ data: DATA.weekday_revenue.values, backgroundColor: blue, borderRadius:4 }]},
+  options: { plugins:{legend:{display:false}}, scales:{ x:{ticks:{font:{size:10}}}, y:{ticks:{callback:v=>fmtINR(v)}} } }
+});
+
+new Chart(document.getElementById("paymentDonut"), {
+  type: "doughnut",
+  data: { labels: DATA.payment_mode.labels, datasets: [{ data: DATA.payment_mode.values, backgroundColor: palette, borderWidth:0 }]},
+  options: { plugins:{legend:{position:"bottom", labels:{boxWidth:10, font:{size:9.5}}}} }
+});
+
+document.getElementById("yearFilter").addEventListener("change", (e)=>{
+  alert("This static build shows full 2022–2024 data. To filter by year, re-run scripts/analyze_kpis.py with a date filter, or open the dataset in Power BI / Excel for live slicing.");
+});
+</script>
+</body>
+</html>
